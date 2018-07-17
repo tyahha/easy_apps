@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf8" />
+    <title>タスクの時間集計</title>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script crossorigin src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
+  <!-- <script src="https://unpkg.com/axios/dist/axios.min.js"></script> -->
+  <script src="http://fb.me/JSXTransformer-0.12.1.js"></script>
+  <script type="text/jsx;harmony=true">
+  //<script type="text/javascript">
+    class Task {
+      constructor(id) {
+        this.id = id
+        this.time = 0
+      }
+    }
+    var timeView2Formatter = new Intl.NumberFormat('ja-JP', { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    function TaskView(props) {
+      const timeView1 = timeView2Formatter.format(props.task.time/1000/60/60)
+      const timeView2 = timeView2Formatter.format(props.task.time/1000)
+      const isCurrent = props.currentTaskId === props.task.id
+      const nameTextStyle = isCurrent ? {background: 'yellow'} : {}
+      const timeStyle = {width: '50px', 'text-align': 'right', 'padding-right': '5px'}
+      return (
+        <div>
+          <button onClick={() => props.deleteTask(props.task.id)}>削除</button>
+          <input type="text" placeholder="タスク名" style={nameTextStyle}/>
+          <input type="text" placeholder="経過時間(hh:mm:ss)" disabled="disabled" value={timeView1 + 'H'} style={timeStyle}/>
+          <input type="text" placeholder="経過時間(H.00)" disabled="disabled" value={timeView2 + '秒'} style={timeStyle}/>
+          <button onClick={() => props.startTimer(props.task.id)} disabled={isCurrent}>計測開始</button>
+        </div>
+      )
+    }
+    class TaskLoggerView extends React.Component {
+      constructor(props) {
+        this.state = {tasks: new Map(), currentTaskId: null}
+        this.timer = null
+        this.prevDate = null
+        this.taskIdCounter = 0
+      }
+
+      addTask() {
+        const id = this.taskIdCounter
+        this.setState({tasks: this.state.tasks.set(id, new Task(id))})
+        this.taskIdCounter++
+      }
+
+      deleteTask(id) {
+        const m = new Map(this.state.tasks)
+        m.delete(id)
+        this.setState({tasks: m})
+      }
+
+      addTime(id) {
+        let targetTask = this.state.tasks.get(id)
+        if (targetTask) {
+          const now = new Date()
+          targetTask.time += now - this.prevDate
+          this.prevDate = now
+          let m = new Map(this.state.tasks)
+          m.set(id, targetTask)
+          this.setState({tasks: m})
+        }
+      }
+
+      startTimer(id) {
+        if (this.state.currentTaskId !== id) {
+          this.stopTimer()
+          this.prevDate = new Date()
+          this.setState({currentTaskId: id})
+          this.timer = setInterval(() => {
+            this.addTime(id)
+          }, 100)
+        }
+      }
+
+      stopTimer() {
+        if (this.state.currentTaskId != null) {
+          this.addTime(this.state.currentTaskId)
+          clearInterval(this.timer)
+          this.timer = null
+          this.setState({currentTaskId: null})
+        }
+      }
+
+      render() {
+        let tasks = []
+        this.state.tasks.forEach(t => {
+          tasks.push(
+            <li>
+              <TaskView
+                task={t}
+                deleteTask={this.deleteTask.bind(this)}
+                startTimer={this.startTimer.bind(this)}
+                currentTaskId={this.state.currentTaskId}
+              />
+            </li>
+          )
+        })
+        return (
+          <div>
+            <h1>タスク集計</h1>
+            <button onClick={this.addTask.bind(this)}>タスク追加</button>
+            <button onClick={() => this.stopTimer()} disabled={this.state.currentTaskId === null}>計測停止</button>
+            <ul>{tasks}</ul>
+          </div>
+        )
+      }
+    }
+  </script>
+  <script type="text/javascript">
+    function timeoutHandler() {
+      if (TaskLoggerView) {
+        const app = document.getElementById('app')
+        if (app) {
+          ReactDOM.render(React.createElement(TaskLoggerView, null), app)
+        }
+        else {
+          console.error('fail to get app dom')
+        }
+      }
+      else {
+        setTimeout(timeoutHandler, 100)
+      }
+    }
+    setTimeout(timeoutHandler, 100)
+  </script>
+  <style type="text/css">
+    /* table, th, td {
+      border-collapse: collapse;
+      border: 1px solid #ccc;
+      line-height: 0.1
+    }
+    table.type06 th {
+      padding: 10px;
+      font-weight: bold;
+      vertical-align: top;
+      background: #3f3f3f;
+      color: #ffffff;
+    }
+    table.type06 td {
+      padding: 10px;
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) {
+      background: #d9d9d9;
+    } */
+  </style>
+</html>
